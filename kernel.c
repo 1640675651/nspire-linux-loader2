@@ -22,9 +22,15 @@
 #include "common.h"
 #include "atag.h"
 #include "fdt.h"
+#include "lcd_compat.h"
 
 /* Where to relocate boot parameters? Defined as start of memory + 0x100 */
 #define BOOT_PARAM_RELADDR ((char*)(settings.phys.start) + 0x100)
+
+#define SPI_SEND(cmd, ...) do { \
+    const uint8_t data[] = {__VA_ARGS__}; \
+    spi_send(cmd, data, sizeof(data)); \
+} while(0)
 
 typedef void kentry(int, int, void*);
 
@@ -40,6 +46,13 @@ void kernel_boot(char *ignored UNUSED) {
         printl("Kernel not loaded." NEWLINE);
         return;
     }
+
+    //lcd_compat_enable();
+    //SPI_SEND(0x36, 0x48); // Set MADCTL to X-reverse + BGR panel
+    SPI_SEND(0x36, 0x28); // Set MADCTL to XY-Swap + BGR panel
+    SPI_SEND(0x2A, 0x00, 0x00, 0x01, 0x3F); // Set column address to (0, 320)
+    SPI_SEND(0x2B, 0x00, 0x00, 0x00, 0xEF); // Set page address to (0, 240)
+    printl("enabling lcd compat mode." NEWLINE);
 
     /* Kernels and initrds should already be loaded to their correct places */
     /* Build atag next */
